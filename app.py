@@ -345,6 +345,28 @@ def export_to_excel(df: pd.DataFrame, original_filename: str) -> bytes:
     
     return output.getvalue()
 
+
+def prepare_download_file(df: pd.DataFrame, original_filename: str) -> Tuple[bytes, str, str]:
+    """
+    Prepare le fichier a telecharger en conservant le nom du fichier importe.
+
+    Pour un CSV importe, le resultat est aussi un CSV avec le meme nom.
+    Pour un fichier Excel, le resultat est un fichier Excel. Les anciens .xls
+    sont exportes en .xlsx car openpyxl ne genere pas de fichiers .xls.
+    """
+    lower_filename = original_filename.lower()
+
+    if lower_filename.endswith(".csv"):
+        data = df.to_csv(index=False).encode("utf-8-sig")
+        return data, original_filename, "text/csv"
+
+    download_filename = original_filename
+    if lower_filename.endswith(".xls") and not lower_filename.endswith(".xlsx"):
+        download_filename = original_filename[:-4] + ".xlsx"
+
+    data = export_to_excel(df, original_filename)
+    return data, download_filename, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
 # En-tête
 st.markdown('<div class="title-container"><h1>Gestionnaire de Notes Étudiants</h1><p style="color: #94a3b8;">Fusion intelligente et tri par INE pour vos délibérations</p></div>', unsafe_allow_html=True)
 
@@ -562,22 +584,14 @@ if df_pv is not None and exam_files_dict:
                         st.metric("Moyenne notes", "N/A")
                 
                 # Préparation du téléchargement
-                processed_data = export_to_excel(df_result, selected_exam_file)
+                processed_data, download_filename, download_mime = prepare_download_file(df_result, selected_exam_file)
                 
                 # Génération du nom du fichier
-                new_filename = selected_exam_file
-                if new_filename.lower().endswith('.csv'):
-                    new_filename = new_filename[:-4] + "_fusionné.xlsx"
-                elif not new_filename.lower().endswith('.xlsx'):
-                    new_filename = new_filename + "_fusionné.xlsx"
-                else:
-                    new_filename = new_filename.replace('.xlsx', '_fusionné.xlsx')
-
                 st.download_button(
                     label="⬇️ Télécharger le fichier mis à jour",
                     data=processed_data,
-                    file_name=new_filename,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    file_name=download_filename,
+                    mime=download_mime,
                     use_container_width=True
                 )
                 
