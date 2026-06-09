@@ -348,21 +348,11 @@ def export_to_excel(df: pd.DataFrame, original_filename: str) -> bytes:
 
 def prepare_download_file(df: pd.DataFrame, original_filename: str) -> Tuple[bytes, str, str]:
     """
-    Prepare le fichier a telecharger en conservant le nom du fichier importe.
-
-    Pour un CSV importe, le resultat est aussi un CSV avec le meme nom.
-    Pour un fichier Excel, le resultat est un fichier Excel. Les anciens .xls
-    sont exportes en .xlsx car openpyxl ne genere pas de fichiers .xls.
+    Prepare le fichier a telecharger en Excel pour eviter les problemes
+    d'affichage lies aux formats CSV ou aux anciens fichiers .xls.
     """
-    lower_filename = original_filename.lower()
-
-    if lower_filename.endswith(".csv"):
-        data = df.to_csv(index=False).encode("utf-8-sig")
-        return data, original_filename, "text/csv"
-
-    download_filename = original_filename
-    if lower_filename.endswith(".xls") and not lower_filename.endswith(".xlsx"):
-        download_filename = original_filename[:-4] + ".xlsx"
+    base_filename = re.sub(r"\.(csv|xls|xlsx)$", "", original_filename, flags=re.IGNORECASE)
+    download_filename = f"{base_filename}.xlsx"
 
     data = export_to_excel(df, original_filename)
     return data, download_filename, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
